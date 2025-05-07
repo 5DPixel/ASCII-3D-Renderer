@@ -4,5 +4,7 @@ use crate::math::Matrix;
 
 fn main() {
     let mat = identity_matrix!(4);
-    println!("{:?}", mat);
+    let mat2 = identity_matrix!(4);
+
+    println!("{:?}", mat + mat2);
 }
