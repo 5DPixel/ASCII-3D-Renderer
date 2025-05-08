@@ -1,6 +1,5 @@
 use std::ops::{Add, Sub, Mul};
 use std::f32::consts::PI;
-use terminal_size::{terminal_size, Width, Height};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Matrix<const N: usize> {
@@ -8,23 +7,31 @@ pub struct Matrix<const N: usize> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Vector3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+pub struct Vector3<T = f32> {
+    pub x: T,
+    pub y: T,
+    pub z: T,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Vector2 {
-    pub x: f32,
-    pub y: f32,
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Vector2<T = f32> {
+    pub x: T,
+    pub y: T,
 }
 
-#[derive(Debug, Clone)]
-pub struct Framebuffer {
-    pub width: usize,
-    pub height: usize,
-    pub data: Vec<char>,
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Triangle {
+    pub c1: Vector2<usize>,
+    pub c2: Vector2<usize>,
+    pub c3: Vector2<usize>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Quad {
+    pub c1: Vector2<usize>,
+    pub c2: Vector2<usize>,
+    pub c3: Vector2<usize>,
+    pub c4: Vector2<usize>,
 }
 
 #[macro_export]
@@ -75,6 +82,25 @@ impl <const N: usize> Mul for Matrix<N> {
     }
 }
 
+impl<T> Vector2<T> {
+    pub fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+}
+
+impl Vector2<usize> {
+    pub fn interpolate(self, other: Vector2<usize>, t: usize) -> Vector2<usize> {
+        Vector2::new(
+            self.x + t * (other.x - self.x),
+            self.y + t * (other.y - self.y),
+        )
+    }
+}
+
+fn interpolate(y0: usize, x0: usize, y2: usize, x2: usize) -> usize {
+    y0 + (y2 - y0) * (x0 - y0) / (x2 - x0)
+}
+
 impl Vector3 {
     pub fn normalize(self) -> Self {
         let length = (self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
@@ -97,7 +123,7 @@ impl Vector3 {
         }
     }
 
-    pub fn to_terminal_coordinates(self, dimensions: Vector2) -> Vector2 {
+    pub fn to_terminal_coordinates(self, dimensions: Vector2<f32>) -> Vector2<f32> {
         let term_x = (self.x * dimensions.x).clamp(0.0, dimensions.x - 1.0);
         let term_y = ((1.0 - self.y) * dimensions.y).clamp(0.0, dimensions.y - 1.0);
         Vector2 {
@@ -119,11 +145,22 @@ impl Sub for Vector3 {
     }
 }
 
-// impl Vector2 {
-//     fn from_terminal_size() -> Vector2 {
+pub fn interpolate_x(p0: Vector2<usize>, p1: Vector2<usize>, y: usize) -> usize {
+    if p1.y == p0.y { return p0.x; }
+    let t = (y - p0.y) as f32 / (p1.y - p0.y) as f32;
 
-//     }
-// }
+    (p0.x as f32 + t * (p1.x as f32 - p0.x as f32)) as usize
+}
+
+impl Triangle {
+    pub fn new(c1: Vector2<usize>, c2: Vector2<usize>, c3: Vector2<usize>) -> Self {
+        Self {
+            c1,
+            c2,
+            c3
+        }
+    }
+}
 
 impl Matrix<4> {
     fn translation_matrix(translation: Vector3) -> Matrix<4> {
