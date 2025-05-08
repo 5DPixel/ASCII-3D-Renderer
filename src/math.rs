@@ -1,5 +1,6 @@
 use std::ops::{Add, Sub, Mul};
 use std::f32::consts::PI;
+use terminal_size::{terminal_size, Width, Height};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Matrix<const N: usize> {
@@ -11,6 +12,19 @@ pub struct Vector3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Vector2 {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct Framebuffer {
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<char>,
 }
 
 #[macro_export]
@@ -82,7 +96,34 @@ impl Vector3 {
             z: self.x * other.y - self.y * other.x,
         }
     }
+
+    pub fn to_terminal_coordinates(self, dimensions: Vector2) -> Vector2 {
+        let term_x = (self.x * dimensions.x).clamp(0.0, dimensions.x - 1.0);
+        let term_y = ((1.0 - self.y) * dimensions.y).clamp(0.0, dimensions.y - 1.0);
+        Vector2 {
+            x: term_x,
+            y: term_y
+        }
+    }
 }
+
+impl Sub for Vector3 {
+    type Output = Vector3;
+
+    fn sub(self, other: Vector3) -> Vector3 {
+        Vector3 {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z
+        }
+    }
+}
+
+// impl Vector2 {
+//     fn from_terminal_size() -> Vector2 {
+
+//     }
+// }
 
 impl Matrix<4> {
     fn translation_matrix(translation: Vector3) -> Matrix<4> {
@@ -155,6 +196,32 @@ impl Matrix<4> {
         mat.data[2][2] = (far + near) / (near - far);
         mat.data[2][3] = (2.0 * far * near) / (near - far);
         mat.data[3][2] = -1.0;
+
+        mat
+    }
+
+    pub fn look_at(eye: Vector3, target: Vector3, up: Vector3) -> Matrix<4> {
+        let forward = (target - eye).normalize();
+        let right = forward.cross(up).normalize();
+        let up = right.cross(forward);
+
+        let mut mat = identity_matrix!(4);
+
+        mat.data[0][0] = right.x;
+        mat.data[1][0] = right.y;
+        mat.data[2][0] = right.z;
+
+        mat.data[0][1] = up.x;
+        mat.data[1][1] = up.y;
+        mat.data[2][1] = up.z;
+
+        mat.data[0][2] = -forward.x;
+        mat.data[1][2] = -forward.y;
+        mat.data[2][2] = -forward.z;
+
+        mat.data[3][0] = -right.dot(eye);
+        mat.data[3][1] = -up.dot(eye);
+        mat.data[3][2] = forward.dot(eye);
 
         mat
     }
